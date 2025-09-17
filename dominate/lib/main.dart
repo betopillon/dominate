@@ -1,122 +1,458 @@
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'game/dominate_game.dart';
+import 'models/player.dart';
+import 'screens/main_screen.dart';
+import 'screens/how_to_play_screen.dart';
+import 'widgets/space_background.dart';
+import 'services/profile_service.dart';
+import 'services/audio_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
+
+  // Initialize profile service
+  await ProfileService.instance.initialize();
+
+  // Initialize audio service
+  await AudioService.instance.initialize();
+
+  // Lock to portrait orientation for mobile
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+
+  runApp(const DominateApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class DominateApp extends StatefulWidget {
+  const DominateApp({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<DominateApp> createState() => _DominateAppState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _DominateAppState extends State<DominateApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+    // Start background music after a short delay to ensure everything is initialized
+    Future.delayed(const Duration(milliseconds: 500), () {
+      AudioService.instance.startBackgroundMusic();
     });
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    AudioService.instance.onAppLifecycleStateChanged(state);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+    return MaterialApp(
+      title: 'Dominate',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        fontFamily: 'Futura',
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        body: SpaceBackground(child: const MainScreen()),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      debugShowCheckedModeBanner: false,
     );
+  }
+}
+
+class GameScreen extends StatefulWidget {
+  final GameMode gameMode;
+
+  const GameScreen({super.key, required this.gameMode});
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  DominateGame? game;
+  bool _isGameOver = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ensurePlayerProfile();
+  }
+
+  Future<void> _ensurePlayerProfile() async {
+    // Ensure current player has a profile (either existing or temporary)
+    await ProfileService.instance.ensureCurrentPlayer();
+    // Create game immediately and start with the passed game mode
+    _startGame(widget.gameMode);
+  }
+
+  void _startGame(GameMode mode) {
+    setState(() {
+      game = DominateGame();
+      _isGameOver = false;
+    });
+
+    // Set up game over callback
+    game!.onGameOver = () {
+      setState(() {
+        _isGameOver = true;
+      });
+    };
+
+    // Start the game after widget is built
+    Future.delayed(const Duration(milliseconds: 100), () {
+      game!.startGame(mode);
+    });
+  }
+
+  void _backToMenu() {
+    Navigator.pop(context);
+  }
+
+  void _showHowToPlay() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const HowToPlayScreen()));
+  }
+
+  void _playAgain() {
+    _startGame(widget.gameMode);
+  }
+
+  String _getWinnerText(List<Player> winners) {
+    if (winners.isEmpty) {
+      return 'It\'s a Draw! No winners this time.';
+    } else if (winners.length == 1) {
+      return 'Winner: ${winners.first.name}';
+    } else {
+      // Multiple winners with same score
+      return 'It\'s a Draw! Winners: ${winners.map((w) => w.name).join(', ')}';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body:
+          game != null
+              ? Stack(
+                children: [
+                  // Game board - full screen
+                  GameWidget(game: game!),
+                  // Top overlay - compact game info
+                  Positioned(top: MediaQuery.of(context).padding.top + 8, left: 16, right: 16, child: _buildCompactGameInfo()),
+                  // Bottom overlay - control button
+                  Positioned(
+                    bottom: MediaQuery.of(context).padding.bottom + 16,
+                    left: 16,
+                    right: 16,
+                    child: StreamBuilder<int>(
+                      stream: Stream.periodic(const Duration(milliseconds: 100), (i) => i),
+                      builder: (context, snapshot) {
+                        return _buildControlButtons();
+                      },
+                    ),
+                  ),
+                ],
+              )
+              : const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _buildCompactGameInfo() {
+    if (game == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.5), width: 1)),
+        child: const Text('Starting game...', style: TextStyle(fontFamily: 'Futura', fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
+      );
+    }
+
+    return StreamBuilder<int>(
+      stream: Stream.periodic(const Duration(milliseconds: 100), (i) => i),
+      builder: (context, snapshot) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.6), width: 2), boxShadow: [BoxShadow(color: const Color(0xFF00D4FF).withValues(alpha: 0.3), blurRadius: 15, spreadRadius: 2)]),
+          child: _buildGameState(),
+        );
+      },
+    );
+  }
+
+  Widget _buildGameState() {
+    if (game!.gameState == GameState.playing) {
+      final currentPlayer = game!.gamePlayers.currentPlayer;
+      final players = game!.gamePlayers.players;
+
+      return Column(
+        children: [
+          // Current player and timer row
+          Row(
+            children: [
+              // Current player indicator
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: currentPlayer.color.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: game!.hasConsecutiveMove ? Colors.amber : currentPlayer.color, width: game!.hasConsecutiveMove ? 3 : 2),
+                    boxShadow: game!.hasConsecutiveMove ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 2)] : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 16, height: 16, decoration: BoxDecoration(color: currentPlayer.color, shape: BoxShape.circle)),
+                      const SizedBox(width: 8),
+                      Text(currentPlayer.name, style: const TextStyle(fontFamily: 'Futura', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                      if (game!.hasConsecutiveMove) ...[const SizedBox(width: 6), const Icon(Icons.flash_on, color: Colors.amber, size: 16)],
+                    ],
+                  ),
+                ),
+              ),
+              // Timer for human players
+              if (currentPlayer.type == PlayerType.human) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: game!.remainingMoveTime <= 10 ? Colors.red.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(12), border: Border.all(color: game!.remainingMoveTime <= 10 ? Colors.red : Colors.orange, width: 2)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.timer, color: game!.remainingMoveTime <= 10 ? Colors.red : Colors.orange, size: 14), const SizedBox(width: 4), Text('${game!.remainingMoveTime}s', style: TextStyle(fontFamily: 'Futura', fontSize: 12, fontWeight: FontWeight.bold, color: game!.remainingMoveTime <= 10 ? Colors.red : Colors.orange))]),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Score display
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children:
+                players.map((player) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: player.color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: player.color.withValues(alpha: 0.5), width: 1)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 12, height: 12, decoration: BoxDecoration(color: player.color, shape: BoxShape.circle)), const SizedBox(width: 4), Text('${player.score}', style: const TextStyle(fontFamily: 'Futura', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white))]),
+                  );
+                }).toList(),
+          ),
+        ],
+      );
+    } else if (game!.gameState == GameState.gameOver) {
+      final winners = game!.gamePlayers.getWinners();
+      final players = game!.gamePlayers.players;
+
+      return Column(
+        children: [
+          // Game Over Title
+          ShaderMask(
+            shaderCallback:
+                (bounds) => const LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 94, 63, 4),
+                    Color(0xFFFFD700), // Gold
+                    Color.fromARGB(255, 94, 63, 4), // Orange
+                  ],
+                ).createShader(bounds),
+            child: const Text('GAME OVER', style: TextStyle(fontFamily: 'Futura', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2)),
+          ),
+          const SizedBox(height: 8),
+          // Winner announcement
+          Text(_getWinnerText(winners), style: const TextStyle(fontFamily: 'Futura', fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+          const SizedBox(height: 12),
+          // Final scores
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children:
+                players.map((player) {
+                  final isWinner = winners.contains(player);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: isWinner ? Colors.amber.withValues(alpha: 0.3) : player.color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: isWinner ? Colors.amber : player.color, width: isWinner ? 2 : 1)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(width: 16, height: 16, decoration: BoxDecoration(color: player.color, shape: BoxShape.circle, border: isWinner ? Border.all(color: Colors.amber, width: 2) : null)),
+                        const SizedBox(width: 6),
+                        Text('${player.score}', style: TextStyle(fontFamily: 'Futura', fontSize: 16, fontWeight: FontWeight.bold, color: isWinner ? Colors.amber : Colors.white)),
+                        if (isWinner) ...[const SizedBox(width: 4), const Icon(Icons.emoji_events, color: Colors.amber, size: 16)],
+                      ],
+                    ),
+                  );
+                }).toList(),
+          ),
+        ],
+      );
+    }
+
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: const Text('Welcome to Dominate!\nPlace blocks and dominate the board!', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Futura', fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white, height: 1.3)));
+  }
+
+  Widget _buildControlButtons() {
+    if (game?.gameState == GameState.gameOver || _isGameOver) {
+      // Game Over: Show Play Again and Back to Menu buttons
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Play Again Button
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.green, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: () => _playAgain(),
+              borderRadius: BorderRadius.circular(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.refresh, color: Colors.green, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Play Again',
+                    style: TextStyle(
+                      fontFamily: 'Futura',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Back to Menu Button
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.6), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: _backToMenu,
+              borderRadius: BorderRadius.circular(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Back to Menu',
+                    style: TextStyle(
+                      fontFamily: 'Futura',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // During Game: Show Back to Menu and Help buttons
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Back to Menu Button
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.6), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: _backToMenu,
+              borderRadius: BorderRadius.circular(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Back to Menu',
+                    style: TextStyle(
+                      fontFamily: 'Futura',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Help Button
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.6), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: _showHowToPlay,
+              borderRadius: BorderRadius.circular(24),
+              child: const Icon(Icons.help_outline, color: Color(0xFF00D4FF), size: 24),
+            ),
+          ),
+        ],
+      );
+    }
   }
 }

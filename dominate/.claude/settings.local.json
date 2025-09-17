@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub:*)",
+      "Bash(./gradlew:*)",
+      "Bash(flutter run:*)",
+      "Bash(flutter:*)",
+      "Bash(if exist .gradle rd /s /q .gradle)",
+      "Bash(/bashes)",
+      "Bash(timeout:*)",
+      "Bash(nc localhost 52420)",
+      "Bash(git checkout:*)",
+      "Bash(dir:*)",
+      "Bash(r)",
+      "Bash(rd:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

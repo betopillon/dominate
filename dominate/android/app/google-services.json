@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "503163975178",
+    "project_id": "dominate-ecb5e",
+    "storage_bucket": "dominate-ecb5e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:503163975178:android:f82f8a99ad516934cdd1f3",
+        "android_client_info": {
+          "package_name": "com.example.dominate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCA2M8NipUBigbplh5CG4RNvSdDjtNWiLY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
