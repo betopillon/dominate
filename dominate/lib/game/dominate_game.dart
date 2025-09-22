@@ -37,6 +37,13 @@ class DominateGame extends FlameGame with HasCollisionDetection {
   final Map<String, bool> _hasConsecutiveMove = {};
   String? _consecutiveMovePlayerId;
 
+  // Auto-play state for non-stealing moves
+  bool _isAutoPlaying = false;
+  async.Timer? _autoPlayTimer;
+
+  // Stealing history tracking for AI mode (prevents auto-play during early game expansion)
+  final Map<BlockState, bool> _hasPlayerStolen = {};
+
   // Move timer
   async.Timer? _moveTimer;
   async.Timer? _timerDisplayUpdateTimer;
@@ -127,6 +134,11 @@ class DominateGame extends FlameGame with HasCollisionDetection {
     _totalTurns = 0;
     _wasPlayerBehind = false;
 
+    // Clear stealing history for new game (AI mode only)
+    if (currentGameMode == GameMode.playerVsAi) {
+      _hasPlayerStolen.clear();
+    }
+
     // Update UI
     _updateGameDisplay();
 
@@ -194,6 +206,7 @@ class DominateGame extends FlameGame with HasCollisionDetection {
 
     // Check if game is over (board full OR no valid moves for any player)
     if (gameBoard.isBoardFull() || !_anyPlayerHasValidMoves()) {
+      _stopAutoPlay(); // Explicitly stop auto-play when game ends
       gameState = GameState.gameOver;
       _handleGameOver();
     } else {
@@ -212,6 +225,8 @@ class DominateGame extends FlameGame with HasCollisionDetection {
       _hasConsecutiveMove.clear();
     }
 
+    final currentPlayer = gamePlayers.currentPlayer;
+
     // Track blocks lost by each player
     for (final entry in stolenBlocks.entries) {
       final victimPlayer = gamePlayers.players.where((p) => p.blockState == entry.key).firstOrNull;
@@ -219,6 +234,12 @@ class DominateGame extends FlameGame with HasCollisionDetection {
       if (victimPlayer != null) {
         _blocksLostThisTurn[victimPlayer.id] = (_blocksLostThisTurn[victimPlayer.id] ?? 0) + entry.value;
       }
+    }
+
+    // Track stealing for auto-play logic (AI mode only)
+    if (currentGameMode == GameMode.playerVsAi && stolenBlocks.isNotEmpty) {
+      _hasPlayerStolen[currentPlayer.blockState] = true;
+      debugPrint('🔄 AUTO-PLAY DEBUG: Player ${currentPlayer.blockState} marked as having stolen blocks. Total stolen: ${stolenBlocks.values.fold(0, (sum, count) => sum + count)}');
     }
   }
 
@@ -238,22 +259,37 @@ class DominateGame extends FlameGame with HasCollisionDetection {
       final blocksLost = _blocksLostThisTurn[newCurrentPlayer.id] ?? 0;
 
       if (blocksLost >= 3) {
-        _consecutiveMovePlayerId = newCurrentPlayer.id;
-        _hasConsecutiveMove[newCurrentPlayer.id] = true;
+        // Only grant consecutive move if player has more than 1 valid move
+        final validMoveCount = gameBoard.getValidMoveCount(newCurrentPlayer.blockState);
+        if (validMoveCount > 1) {
+          _consecutiveMovePlayerId = newCurrentPlayer.id;
+          _hasConsecutiveMove[newCurrentPlayer.id] = true;
+        }
       }
     }
 
     // Start timing next move
     _moveStartTime = DateTime.now();
 
-    // Start move timer for human players only
-    _startMoveTimer();
+    // Check if new current player should enter auto-play mode
+    debugPrint('🔄 AUTO-PLAY DEBUG: Turn transition to ${gamePlayers.currentPlayer.blockState} (${gamePlayers.currentPlayer.name})');
+    if (shouldAutoPlay()) {
+      debugPrint('🔄 AUTO-PLAY DEBUG: Starting auto-play for ${gamePlayers.currentPlayer.blockState}');
+      _startAutoPlay();
+    } else {
+      debugPrint('🔄 AUTO-PLAY DEBUG: Not starting auto-play for ${gamePlayers.currentPlayer.blockState}');
+      _stopAutoPlay();
 
-    // If AI mode and now it's AI's turn, make AI move
-    if (currentGameMode == GameMode.playerVsAi && gamePlayers.isCurrentPlayerAi) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _makeAiMove();
-      });
+      // Start move timer for human players only
+      _startMoveTimer();
+
+      // If AI mode and now it's AI's turn, make AI move
+      if (currentGameMode == GameMode.playerVsAi && gamePlayers.isCurrentPlayerAi) {
+        debugPrint('🔄 AUTO-PLAY DEBUG: Making AI move for ${gamePlayers.currentPlayer.blockState}');
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _makeAiMove();
+        });
+      }
     }
   }
 
@@ -262,6 +298,79 @@ class DominateGame extends FlameGame with HasCollisionDetection {
 
   /// Get remaining time for current move (for human players only)
   int get remainingMoveTime => _remainingTimeSeconds;
+
+  /// Check if auto-play is currently active
+  bool get isAutoPlaying => _isAutoPlaying;
+
+  /// Check if "Back to Menu" button should be hidden
+  bool get shouldHideBackButton {
+    // Hide during auto-play
+    if (_isAutoPlaying) {
+      debugPrint('🔄 BUTTON DEBUG: Hiding back button - auto-play active');
+      return true;
+    }
+
+    // Hide when AI is playing in auto-play context (Player vs AI mode)
+    if (currentGameMode == GameMode.playerVsAi && gamePlayers.isCurrentPlayerAi) {
+      // Check if human player has only non-strategic moves
+      final humanPlayer = gamePlayers.players.firstWhere((p) => p.type == PlayerType.human);
+      final stealingHasOccurred = _hasPlayerStolen.values.any((hasStolen) => hasStolen == true);
+
+      if (stealingHasOccurred && !gameBoard.canMoveStealBlocks(humanPlayer.blockState)) {
+        debugPrint('🔄 BUTTON DEBUG: Hiding back button - AI playing, human will auto-play next');
+        return true; // Hide because human will auto-play next
+      }
+    }
+
+    debugPrint('🔄 BUTTON DEBUG: Showing back button - player has strategic choices');
+    return false;
+  }
+
+  /// Check if current player should enter auto-play mode
+  bool shouldAutoPlay() {
+    final currentPlayer = gamePlayers.currentPlayer;
+
+    // Only auto-play in Player vs AI mode
+    if (currentGameMode != GameMode.playerVsAi) {
+      return false;
+    }
+
+    // Only auto-play for human players
+    if (currentPlayer.type != PlayerType.human) {
+      return false;
+    }
+
+    // Must have valid moves
+    final hasValidMoves = gameBoard.hasValidMoves(currentPlayer.blockState);
+    if (!hasValidMoves) {
+      return false;
+    }
+
+    // Only enable auto-play if stealing has occurred in the game (prevent early game auto-play)
+    final stealingHasOccurred = _hasPlayerStolen.values.any((hasStolen) => hasStolen == true);
+    if (!stealingHasOccurred) {
+      return false;
+    }
+
+    // Check if AI player has any moves left
+    final aiPlayer = gamePlayers.players.firstWhere((p) => p.type == PlayerType.ai);
+    final aiHasValidMoves = gameBoard.hasValidMoves(aiPlayer.blockState);
+
+    // Only auto-play if no moves can steal blocks OR if AI has no more moves
+    final canSteal = gameBoard.canMoveStealBlocks(currentPlayer.blockState);
+
+    // Auto-play should trigger if:
+    // 1. Human cannot steal any blocks, OR
+    // 2. AI has no moves left (meaning human should finish remaining moves)
+    final shouldAuto = !canSteal || !aiHasValidMoves;
+
+    // Debug key decision points
+    if (shouldAuto) {
+      debugPrint('🔄 AUTO-PLAY: Starting for ${currentPlayer.name} - canSteal: $canSteal, aiHasMoves: $aiHasValidMoves');
+    }
+
+    return shouldAuto;
+  }
 
   bool _anyPlayerHasValidMoves() {
     final playerBlockStates = gamePlayers.players.map((p) => p.blockState).toList();
@@ -331,12 +440,15 @@ class DominateGame extends FlameGame with HasCollisionDetection {
 
   void resetGame() {
     _cancelMoveTimer(); // Cancel any active move timer
+    _stopAutoPlay(); // Stop auto-play if active
     if (_isInitialized) {
       gameBoard.reset();
       gamePlayers.reset();
     }
     gameState = GameState.modeSelection;
     currentGameMode = null;
+    // Clear stealing history for reset
+    _hasPlayerStolen.clear();
     if (_isInitialized) {
       _updateGameDisplay();
     }
@@ -351,6 +463,62 @@ class DominateGame extends FlameGame with HasCollisionDetection {
     final bestMove = _findBestAiMove(aiPlayer.blockState);
     if (bestMove != null) {
       makeMove(bestMove[0], bestMove[1]);
+    }
+  }
+
+  void _startAutoPlay() {
+    if (_isAutoPlaying) return;
+
+    debugPrint('🔄 AUTO-PLAY DEBUG: Starting auto-play mode');
+    _isAutoPlaying = true;
+    _scheduleAutoPlayMove();
+  }
+
+  void _stopAutoPlay() {
+    if (_isAutoPlaying) {
+      debugPrint('🔄 AUTO-PLAY DEBUG: Stopping auto-play mode');
+    }
+    _isAutoPlaying = false;
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = null;
+  }
+
+  void _scheduleAutoPlayMove() {
+    if (!_isAutoPlaying || gameState != GameState.playing) {
+      return;
+    }
+
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = async.Timer(const Duration(milliseconds: 500), () {
+      _makeAutoPlayMove();
+    });
+  }
+
+  void _makeAutoPlayMove() {
+    if (!_isAutoPlaying || gameState != GameState.playing) {
+      return;
+    }
+
+    final currentPlayer = gamePlayers.currentPlayer;
+    if (currentPlayer.type != PlayerType.human) {
+      _stopAutoPlay();
+      return;
+    }
+
+    // Get valid moves
+    final validMoves = _getAllValidMoves(currentPlayer.blockState);
+    if (validMoves.isEmpty) {
+      _stopAutoPlay();
+      return;
+    }
+
+    // Pick a random valid move for auto-play
+    final randomMove = validMoves[Random().nextInt(validMoves.length)];
+    final moveResult = makeMove(randomMove[0], randomMove[1]);
+
+    // Schedule next auto-play move if still in auto-play mode and game is still playing
+    if (_isAutoPlaying && gameState == GameState.playing) {
+      _scheduleAutoPlayMove();
     }
   }
 
