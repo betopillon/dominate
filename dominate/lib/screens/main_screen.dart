@@ -107,7 +107,6 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildMenuButton({required String title, required String subtitle, required IconData icon, required Color color, required VoidCallback onPressed}) {
     return Container(
       width: double.infinity,
-      height: 80,
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -127,7 +126,20 @@ class _MainScreenState extends State<MainScreen> {
                 Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withValues(alpha: 0.5), width: 1)), child: Icon(icon, size: 28, color: Colors.white)),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)), Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7), letterSpacing: 0.5), overflow: TextOverflow.ellipsis)]),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1), overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(height: 2),
+                      Flexible(
+                        child: Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7), letterSpacing: 0.5), overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
                 ),
                 Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.5), size: 16),
               ],
