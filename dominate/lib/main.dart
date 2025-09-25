@@ -357,85 +357,100 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildControlButtons() {
     if (game?.gameState == GameState.gameOver || _isGameOver) {
       // Game Over: Show Play Again and Back to Menu buttons
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Play Again Button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.green, width: 2),
-              boxShadow: [
-                BoxShadow(
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Play Again Button
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: InkWell(
-              onTap: () => _playAgain(),
-              borderRadius: BorderRadius.circular(24),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.refresh, color: Colors.green, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Play Again',
-                    style: TextStyle(
-                      fontFamily: 'Futura',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                      letterSpacing: 1,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.green, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withValues(alpha: 0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
                     ),
+                  ],
+                ),
+                child: InkWell(
+                  onTap: () => _playAgain(),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.refresh, color: Colors.green, size: 20),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Play Again',
+                          style: TextStyle(
+                            fontFamily: 'Futura',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                            letterSpacing: 1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          // Back to Menu Button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.red.withValues(alpha: 0.6), width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: InkWell(
-              onTap: _backToMenu,
-              borderRadius: BorderRadius.circular(24),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Back to Menu',
-                    style: TextStyle(
-                      fontFamily: 'Futura',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1,
+            const SizedBox(width: 8),
+            // Back to Menu Button
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.6), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withValues(alpha: 0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
                     ),
+                  ],
+                ),
+                child: InkWell(
+                  onTap: _backToMenu,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Back to Menu',
+                          style: TextStyle(
+                            fontFamily: 'Futura',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     } else {
       // During Game: Show Back to Menu and Help buttons
