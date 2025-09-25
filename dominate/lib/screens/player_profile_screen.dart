@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/profile_service.dart';
 import '../models/player_profile.dart';
 import '../models/game_stats.dart';
+import 'profile_creation_screen.dart';
 
 class PlayerProfileScreen extends StatefulWidget {
   const PlayerProfileScreen({super.key});
@@ -314,9 +315,9 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> with TickerPr
               ),
               child: _isLoading
                   ? SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                      height: 28,
+                      width: 28,
+                      child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3),
                     )
                   : Text(
                       'Create Account',
@@ -411,9 +412,9 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> with TickerPr
               ),
               child: _isLoading
                   ? SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                      height: 28,
+                      width: 28,
+                      child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3),
                     )
                   : Text(
                       'Sign In',
@@ -755,9 +756,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> with TickerPr
           width: double.infinity,
           height: 48,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Navigate to edit profile
-            },
+            onPressed: () => _navigateToEditProfile(),
             icon: Icon(Icons.edit, size: 20),
             label: Text('Edit Profile'),
             style: ElevatedButton.styleFrom(
@@ -803,35 +802,28 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> with TickerPr
 
     bool hasError = false;
 
-    // Email validation
+    // Batch validation to avoid multiple rebuilds
     final emailValidation = ProfileService.instance.validateEmail(email);
-    if (emailValidation != null) {
-      setState(() => _emailError = emailValidation);
-      hasError = true;
-    }
-
-    // Nickname validation
     final nicknameValidation = ProfileService.instance.validateNickname(nickname);
-    if (nicknameValidation != null) {
-      setState(() => _nicknameError = nicknameValidation);
-      hasError = true;
-    }
-
-    // Password validation
     final passwordValidation = ProfileService.instance.validatePassword(password);
-    if (passwordValidation != null) {
-      setState(() => _passwordError = passwordValidation);
+    String? finalPasswordError = passwordValidation;
+
+    if (password != confirmPassword) {
+      finalPasswordError = 'Passwords do not match';
       hasError = true;
     }
 
-    // Confirm password
-    if (password != confirmPassword) {
-      setState(() => _passwordError = 'Passwords do not match');
-      hasError = true;
-    }
+    if (emailValidation != null) hasError = true;
+    if (nicknameValidation != null) hasError = true;
+    if (finalPasswordError != null) hasError = true;
 
     if (hasError) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _emailError = emailValidation;
+        _nicknameError = nicknameValidation;
+        _passwordError = finalPasswordError;
+        _isLoading = false;
+      });
       return;
     }
 
@@ -976,6 +968,25 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> with TickerPr
         },
       ),
     );
+  }
+
+  Future<void> _navigateToEditProfile() async {
+    if (_currentProfile == null) return;
+
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfileCreationScreen(
+          isEditing: true,
+          existingProfile: _currentProfile!,
+        ),
+      ),
+    );
+
+    // Refresh profile if editing was successful
+    if (result == true) {
+      await _loadCurrentProfile();
+    }
   }
 }
 
@@ -1216,9 +1227,9 @@ class _UpgradeAccountDialogState extends State<_UpgradeAccountDialog> {
                       ),
                       child: _isLoading
                           ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3),
                             )
                           : Text(
                               'Upgrade Now',
@@ -1329,28 +1340,25 @@ class _UpgradeAccountDialogState extends State<_UpgradeAccountDialog> {
 
     bool hasError = false;
 
-    // Validate email
+    // Batch validation to avoid multiple rebuilds
     final emailValidation = ProfileService.instance.validateEmail(email);
-    if (emailValidation != null) {
-      setState(() => _emailError = emailValidation);
-      hasError = true;
-    }
-
-    // Validate password
     final passwordValidation = ProfileService.instance.validatePassword(password);
-    if (passwordValidation != null) {
-      setState(() => _passwordError = passwordValidation);
+    String? finalPasswordError = passwordValidation;
+
+    if (password != confirmPassword) {
+      finalPasswordError = 'Passwords do not match';
       hasError = true;
     }
 
-    // Check password confirmation
-    if (password != confirmPassword) {
-      setState(() => _passwordError = 'Passwords do not match');
-      hasError = true;
-    }
+    if (emailValidation != null) hasError = true;
+    if (finalPasswordError != null) hasError = true;
 
     if (hasError) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _emailError = emailValidation;
+        _passwordError = finalPasswordError;
+        _isLoading = false;
+      });
       return;
     }
 

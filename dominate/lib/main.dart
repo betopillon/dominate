@@ -2,6 +2,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'game/dominate_game.dart';
 import 'models/player.dart';
 import 'screens/main_screen.dart';
@@ -11,21 +12,60 @@ import 'services/profile_service.dart';
 import 'services/audio_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Wrap everything in try-catch to prevent app crashes during initialization
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+    // Initialize Firebase with platform-specific options
+    try {
+      print('🔥 Initializing Firebase...');
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      print('🔥 Firebase initialized successfully');
+    } catch (e) {
+      print('🔥 Firebase initialization failed: $e');
+      print('🔥 App will continue with local-only functionality');
+      // Continue without Firebase - app should still work locally
+    }
 
-  // Initialize profile service
-  await ProfileService.instance.initialize();
+    // Initialize profile service
+    try {
+      print('👤 Initializing ProfileService...');
+      await ProfileService.instance.initialize();
+      print('👤 ProfileService initialized successfully');
+    } catch (e) {
+      print('👤 ProfileService initialization failed: $e');
+      // Profile service has its own error handling, continue anyway
+    }
 
-  // Initialize audio service
-  await AudioService.instance.initialize();
+    // Initialize audio service
+    try {
+      print('🎵 Initializing AudioService...');
+      await AudioService.instance.initialize();
+      print('🎵 AudioService initialized successfully');
+    } catch (e) {
+      print('🎵 AudioService initialization failed: $e');
+      // Audio service failure shouldn't prevent app from running
+    }
 
-  // Lock to portrait orientation for mobile
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+    // Lock to portrait orientation for mobile
+    try {
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+      print('📱 Portrait orientation set');
+    } catch (e) {
+      print('📱 Orientation setting failed: $e');
+      // Orientation failure is not critical
+    }
 
-  runApp(const DominateApp());
+    print('✅ App initialization completed, starting app...');
+    runApp(const DominateApp());
+
+  } catch (e) {
+    print('💥 CRITICAL: App initialization failed completely: $e');
+    // Even if everything fails, try to start the app with minimal functionality
+    runApp(const DominateApp());
+  }
 }
 
 class DominateApp extends StatefulWidget {
@@ -43,7 +83,12 @@ class _DominateAppState extends State<DominateApp> with WidgetsBindingObserver {
 
     // Start background music after a short delay to ensure everything is initialized
     Future.delayed(const Duration(milliseconds: 500), () {
-      AudioService.instance.startBackgroundMusic();
+      try {
+        AudioService.instance.startBackgroundMusic();
+      } catch (e) {
+        print('🎵 Failed to start background music: $e');
+        // Music failure shouldn't affect app functionality
+      }
     });
   }
 
@@ -56,7 +101,12 @@ class _DominateAppState extends State<DominateApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    AudioService.instance.onAppLifecycleStateChanged(state);
+    try {
+      AudioService.instance.onAppLifecycleStateChanged(state);
+    } catch (e) {
+      print('🎵 Audio lifecycle state change failed: $e');
+      // Audio lifecycle errors shouldn't crash the app
+    }
   }
 
   @override

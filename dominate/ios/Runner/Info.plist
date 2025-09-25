@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>dominate</string>
+	<string>Dominate</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -45,5 +45,45 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- App Store metadata -->
+	<key>CFBundleDisplayName</key>
+	<string>Dominate</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<!-- Privacy descriptions -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This app does not track users across apps or websites.</string>
+
+	<!-- Firebase Analytics privacy -->
+	<key>NSDataCollectionUsageDescription</key>
+	<string>This app collects anonymous usage data to improve the gaming experience.</string>
+
+	<!-- Internet connectivity -->
+	<key>NSAllowsArbitraryLoads</key>
+	<false/>
+	<key>NSExceptionDomains</key>
+	<dict>
+		<key>firebase.googleapis.com</key>
+		<dict>
+			<key>NSExceptionAllowsInsecureHTTPLoads</key>
+			<false/>
+			<key>NSExceptionMinimumTLSVersion</key>
+			<string>TLSv1.2</string>
+		</dict>
+	</dict>
+
+	<!-- Supported device orientations -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
+
+	<!-- App category -->
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.games</string>
+
+	<!-- iOS deployment target -->
+	<key>MinimumOSVersion</key>
+	<string>13.0</string>
 </dict>
 </plist>

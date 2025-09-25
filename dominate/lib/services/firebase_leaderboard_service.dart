@@ -9,8 +9,9 @@ class LeaderboardEntry {
   final String nickname;
   final int totalWins;
   final AvatarOption? avatarOption;
+  final DateTime? lastWinTimestamp; // For ranking players with same wins
 
-  LeaderboardEntry({required this.uid, required this.nickname, required this.totalWins, this.avatarOption});
+  LeaderboardEntry({required this.uid, required this.nickname, required this.totalWins, this.avatarOption, this.lastWinTimestamp});
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -18,6 +19,7 @@ class LeaderboardEntry {
       'nickname': nickname,
       'totalWins': totalWins,
       'avatarOption': avatarOption?.name,
+      'lastWinTimestamp': lastWinTimestamp != null ? Timestamp.fromDate(lastWinTimestamp!) : null,
     };
   }
 
@@ -30,6 +32,7 @@ class LeaderboardEntry {
       avatarOption: data['avatarOption'] != null
           ? AvatarOption.values.firstWhere((e) => e.name == data['avatarOption'], orElse: () => AvatarOption.astronaut)
           : null,
+      lastWinTimestamp: (data['lastWinTimestamp'] as Timestamp?)?.toDate(),
     );
   }
 }
@@ -56,7 +59,7 @@ class FirebaseLeaderboardService {
   CollectionReference get _leaderboardCollection => _firestore.collection('leaderboard');
 
   /// Update player's entry in the leaderboard
-  Future<void> updatePlayerEntry({required String uid, required String nickname, required int totalWins, AvatarOption? avatarOption}) async {
+  Future<void> updatePlayerEntry({required String uid, required String nickname, required int totalWins, AvatarOption? avatarOption, DateTime? lastWinTimestamp}) async {
     try {
       debugPrint('🏆 Updating leaderboard entry: $nickname ($totalWins wins)');
 
@@ -65,6 +68,7 @@ class FirebaseLeaderboardService {
         nickname: nickname,
         totalWins: totalWins,
         avatarOption: avatarOption,
+        lastWinTimestamp: lastWinTimestamp,
       );
 
       await _leaderboardCollection.doc(uid).set(entry.toFirestore());
@@ -81,11 +85,37 @@ class FirebaseLeaderboardService {
     try {
       debugPrint('🏆 Fetching top 10 players from leaderboard');
 
-      final snapshot = await _leaderboardCollection.orderBy('totalWins', descending: true).limit(10).get();
+      // Get all players to sort properly by wins and timestamp
+      final snapshot = await _leaderboardCollection.get();
 
-      final top10 = snapshot.docs.map((doc) => LeaderboardEntry.fromFirestore(doc)).toList();
+      final allPlayers = snapshot.docs.map((doc) => LeaderboardEntry.fromFirestore(doc)).toList();
 
-      debugPrint('🏆 Retrieved ${top10.length} top players');
+      // Sort by wins (descending), then by timestamp (ascending - oldest win ranks higher)
+      allPlayers.sort((a, b) {
+        // Primary sort: by number of wins (descending)
+        if (a.totalWins != b.totalWins) {
+          return b.totalWins.compareTo(a.totalWins);
+        }
+
+        // Secondary sort: by timestamp (ascending - oldest win ranks higher)
+        // Players with no lastWinTimestamp (no wins yet) go to the end
+        if (a.lastWinTimestamp == null && b.lastWinTimestamp == null) {
+          return 0; // Both have no wins, maintain order
+        }
+        if (a.lastWinTimestamp == null) {
+          return 1; // a goes after b (b has wins, a doesn't)
+        }
+        if (b.lastWinTimestamp == null) {
+          return -1; // a goes before b (a has wins, b doesn't)
+        }
+
+        // Both have timestamps, older wins rank higher
+        return a.lastWinTimestamp!.compareTo(b.lastWinTimestamp!);
+      });
+
+      final top10 = allPlayers.take(10).toList();
+
+      debugPrint('🏆 Retrieved ${top10.length} top players (sorted by wins, then by oldest win timestamp)');
       return top10;
     } catch (e) {
       debugPrint('🏆 Error fetching top 10 players: $e');

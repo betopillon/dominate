@@ -118,6 +118,16 @@ class _HowToPlayScreenState extends State<HowToPlayScreen>
           ),
           const SizedBox(height: 16),
 
+          _buildSectionTitle('📊 Leaderboard Ranking'),
+          _buildInfoCard(
+            'How Rankings Work',
+            '• Players are ranked by total number of wins\n'
+            '• When players have the same wins, ranking is determined by who achieved that number first\n'
+            '• The player with the oldest win timestamp ranks higher\n'
+            '• This rewards consistent early performance and long-term dedication',
+          ),
+          const SizedBox(height: 16),
+
           // Starting positions visualization
           _buildSectionTitle('🎲 Starting Positions'),
           _buildStartingPositionsDemo(),

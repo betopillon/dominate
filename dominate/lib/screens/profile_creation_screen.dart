@@ -121,7 +121,7 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && _isLoading) {
         setState(() => _isLoading = false);
       }
     }
@@ -497,11 +497,11 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
             ),
             child: _isLoading
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
                     child: CircularProgressIndicator(
                       color: Colors.white,
-                      strokeWidth: 2,
+                      strokeWidth: 3,
                     ),
                   )
                 : Text(

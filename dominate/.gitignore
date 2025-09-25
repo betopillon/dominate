@@ -43,3 +43,38 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/build/
+/android/build/
+
+# iOS build artifacts
+/ios/build/
+/ios/Runner.xcworkspace/xcuserdata/
+/ios/Runner.xcodeproj/xcuserdata/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+
+# macOS build artifacts
+/macos/build/
+
+# Windows build artifacts
+/windows/build/
+
+# Web build artifacts
+/web/build/
+
+# Firebase
+firebase_debug.log
+firestore_debug.log
+
+# Temporary documentation files
+*.md.tmp
+BUILD_*.md
+DEBUG_*.md
+FIREBASE_*.md
+KOTLIN_*.md
+CORRECTED_*.md
+
+# Backup files
+*_old.json
+*_working_old.json

@@ -240,20 +240,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
             const SizedBox(width: 12),
 
             // Avatar
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Color(0xFF00D4FF).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Center(
-                child: Text(
-                  entry.avatarOption != null ? entry.avatarOption!.emoji : '👨‍🚀',
-                  style: TextStyle(fontSize: 24),
-                ),
-              ),
-            ),
+            Container(width: 48, height: 48, decoration: BoxDecoration(color: Color(0xFF00D4FF).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(24)), child: Center(child: Text(entry.avatarOption != null ? entry.avatarOption!.emoji : '👨‍🚀', style: TextStyle(fontSize: 24)))),
             const SizedBox(width: 12),
 
             // Player Info
@@ -270,7 +257,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
                     ],
                   ),
                   const SizedBox(height: 4),
-                  _buildStatChip('${entry.totalWins} VS AI wins', Icons.emoji_events),
+                  //_buildStatChip('${entry.totalWins} VS AI wins', Icons.emoji_events),
                 ],
               ),
             ),
@@ -283,13 +270,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
     );
   }
 
-  Widget _buildStatChip(String text, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 12, color: Colors.white.withValues(alpha: 0.7)), const SizedBox(width: 4), Text(text, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11))]),
-    );
-  }
+  // Widget _buildStatChip(String text, IconData icon) {
+  //   return Container(
+  //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+  //     child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 12, color: Colors.white.withValues(alpha: 0.7)), const SizedBox(width: 4), Text(text, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11))]),
+  //   );
+  // }
 
   Color _getWinsColor(int wins) {
     if (wins >= 50) return Colors.green;

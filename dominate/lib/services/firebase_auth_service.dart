@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class FirebaseAuthService {
   static FirebaseAuthService? _instance;
@@ -22,9 +23,12 @@ class FirebaseAuthService {
   // Sign in anonymously (for temporary players)
   Future<User?> signInAnonymously() async {
     try {
+      debugPrint('Attempting anonymous sign-in...');
       final userCredential = await _auth.signInAnonymously();
+      debugPrint('Anonymous sign-in successful: ${userCredential.user?.uid}');
       return userCredential.user;
     } catch (e) {
+      debugPrint('Anonymous sign-in failed: $e');
       return null;
     }
   }

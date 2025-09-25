@@ -16,7 +16,21 @@
       "Bash(dir:*)",
       "Bash(r)",
       "Bash(rd:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(magick:*)",
+      "Bash(dart run:*)",
+      "Bash(keytool:*)",
+      "Bash(git restore:*)",
+      "Bash(taskkill:*)",
+      "Bash(adb shell:*)",
+      "Bash(findstr:*)",
+      "Bash(adb:*)",
+      "Bash(copy \"com\\example\\dominate\\MainActivity.kt\" \"com\\betogames\\dominate\\MainActivity.kt\")",
+      "Bash(copy:*)",
+      "Bash(git pull:*)",
+      "Read(//d/Projects/claude_code/Dominate/**)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

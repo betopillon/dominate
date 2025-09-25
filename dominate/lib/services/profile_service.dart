@@ -30,16 +30,33 @@ class ProfileService {
   // Initialize service and load current profile
   Future<void> initialize() async {
     try {
-      // First check if user is authenticated with Firebase
+      // First try to sign in anonymously if not authenticated
+      if (!_authService.isAuthenticated) {
+        try {
+          await _authService.signInAnonymously();
+        } catch (e) {
+          // If anonymous sign-in fails, continue with local storage only
+          debugPrint('Anonymous sign-in failed: $e');
+        }
+      }
+
+      // Now check authentication and load profile accordingly
       if (_authService.isAuthenticated) {
-        // Load profile from Firebase
-        _currentProfile = await _firebaseProfileService.loadProfile();
+        try {
+          // Load profile from Firebase
+          _currentProfile = await _firebaseProfileService.loadProfile();
+        } catch (e) {
+          // If Firebase fails, fall back to local storage
+          debugPrint('Firebase profile load failed: $e');
+          await loadCurrentProfile();
+        }
       } else {
         // Load profile from local storage
         await loadCurrentProfile();
       }
     } catch (e) {
       // Continue without loaded profile if initialization fails
+      debugPrint('ProfileService initialization failed: $e');
       _currentProfile = null;
     }
   }
@@ -136,13 +153,7 @@ class ProfileService {
     }
 
     // Create profile in Firebase
-    final profile = await _firebaseProfileService.createProfileForUser(
-      email: email,
-      nickname: nickname,
-      avatarType: avatarType,
-      imagePath: imagePath,
-      avatarOption: avatarOption,
-    );
+    final profile = await _firebaseProfileService.createProfileForUser(email: email, nickname: nickname, avatarType: avatarType, imagePath: imagePath, avatarOption: avatarOption);
 
     _currentProfile = profile;
     return profile;
@@ -163,14 +174,7 @@ class ProfileService {
         await _authService.updateEmail(email);
       }
 
-      final updatedProfile = await _firebaseProfileService.updateProfile(
-        email: email,
-        nickname: nickname,
-        avatarType: avatarType,
-        imagePath: imagePath,
-        avatarOption: avatarOption,
-        isEmailVerified: isEmailVerified,
-      );
+      final updatedProfile = await _firebaseProfileService.updateProfile(currentProfile: _currentProfile, email: email, nickname: nickname, avatarType: avatarType, imagePath: imagePath, avatarOption: avatarOption, isEmailVerified: isEmailVerified);
 
       if (updatedProfile != null) {
         _currentProfile = updatedProfile;
@@ -187,16 +191,7 @@ class ProfileService {
         newPasswordHash = _hashPassword(password, newSalt);
       }
 
-      final updatedProfile = _currentProfile!.copyWith(
-        email: email,
-        nickname: nickname,
-        passwordHash: newPasswordHash,
-        salt: newSalt,
-        avatarType: avatarType,
-        imagePath: imagePath,
-        avatarOption: avatarOption,
-        isEmailVerified: isEmailVerified,
-      );
+      final updatedProfile = _currentProfile!.copyWith(email: email, nickname: nickname, passwordHash: newPasswordHash, salt: newSalt, avatarType: avatarType, imagePath: imagePath, avatarOption: avatarOption, isEmailVerified: isEmailVerified);
 
       await saveCurrentProfile(updatedProfile);
       return updatedProfile;
@@ -285,7 +280,19 @@ class ProfileService {
   // Ensure current player has a profile
   Future<PlayerProfile> ensureCurrentPlayer() async {
     if (_currentProfile == null) {
-      return generateTemporaryProfile();
+      try {
+        // First try to sign in anonymously if not authenticated
+        if (!_authService.isAuthenticated) {
+          await _authService.signInAnonymously();
+        }
+
+        // Generate temporary profile
+        _currentProfile = generateTemporaryProfile();
+      } catch (e) {
+        // If Firebase fails, create a local-only temporary profile
+        debugPrint('Failed to ensure current player with Firebase: $e');
+        _currentProfile = generateTemporaryProfile();
+      }
     }
     return _currentProfile!;
   }
@@ -323,7 +330,6 @@ class ProfileService {
     final digest = sha256.convert(combined);
     return digest.toString();
   }
-
 
   // Login with email and password
   Future<PlayerProfile?> login(String email, String password) async {
@@ -364,32 +370,14 @@ class ProfileService {
   }
 
   // Update player stats with match result
-  Future<PlayerProfile> updateStats({
-    required GameMode gameMode,
-    required MatchResult result,
-    required int playerBlocks,
-    required int opponentBlocks,
-    required int matchDurationSeconds,
-    required List<int> moveTimes,
-    required int totalTurns,
-    bool wasBehind = false,
-  }) async {
+  Future<PlayerProfile> updateStats({required GameMode gameMode, required MatchResult result, required int playerBlocks, required int opponentBlocks, required int matchDurationSeconds, required List<int> moveTimes, required int totalTurns, bool wasBehind = false}) async {
     if (_currentProfile == null) {
       throw Exception('No current profile to update stats for');
     }
 
     if (_authService.isAuthenticated && _currentProfile!.isRegistered) {
       // Update stats in Firebase
-      final updatedProfile = await _firebaseProfileService.updateStats(
-        gameMode: gameMode,
-        result: result,
-        playerBlocks: playerBlocks,
-        opponentBlocks: opponentBlocks,
-        matchDurationSeconds: matchDurationSeconds,
-        moveTimes: moveTimes,
-        totalTurns: totalTurns,
-        wasBehind: wasBehind,
-      );
+      final updatedProfile = await _firebaseProfileService.updateStats(currentProfile: _currentProfile, gameMode: gameMode, result: result, playerBlocks: playerBlocks, opponentBlocks: opponentBlocks, matchDurationSeconds: matchDurationSeconds, moveTimes: moveTimes, totalTurns: totalTurns, wasBehind: wasBehind);
 
       if (updatedProfile != null) {
         _currentProfile = updatedProfile;
@@ -401,16 +389,7 @@ class ProfileService {
       }
     } else {
       // Update local stats for temporary users
-      final updatedStats = _currentProfile!.stats.updateWithMatch(
-        mode: gameMode,
-        result: result,
-        playerBlocks: playerBlocks,
-        opponentBlocks: opponentBlocks,
-        matchDurationSeconds: matchDurationSeconds,
-        moveTimes: moveTimes,
-        totalTurns: totalTurns,
-        wasBehind: wasBehind,
-      );
+      final updatedStats = _currentProfile!.stats.updateWithMatch(mode: gameMode, result: result, playerBlocks: playerBlocks, opponentBlocks: opponentBlocks, matchDurationSeconds: matchDurationSeconds, moveTimes: moveTimes, totalTurns: totalTurns, wasBehind: wasBehind);
 
       final updatedProfile = _currentProfile!.copyWith(stats: updatedStats);
       await saveCurrentProfile(updatedProfile);
@@ -439,14 +418,7 @@ class ProfileService {
   }
 
   // Convert temporary account to permanent
-  Future<PlayerProfile?> convertToPermanentAccount({
-    required String email,
-    required String nickname,
-    required String password,
-    required AvatarType avatarType,
-    String? imagePath,
-    AvatarOption? avatarOption,
-  }) async {
+  Future<PlayerProfile?> convertToPermanentAccount({required String email, required String nickname, required String password, required AvatarType avatarType, String? imagePath, AvatarOption? avatarOption}) async {
     try {
       // Link anonymous account with email/password
       final user = await _authService.linkWithEmailAndPassword(email, password);
@@ -455,13 +427,7 @@ class ProfileService {
       }
 
       // Create permanent profile
-      final profile = await _firebaseProfileService.createProfileForUser(
-        email: email,
-        nickname: nickname,
-        avatarType: avatarType,
-        imagePath: imagePath,
-        avatarOption: avatarOption,
-      );
+      final profile = await _firebaseProfileService.createProfileForUser(email: email, nickname: nickname, avatarType: avatarType, imagePath: imagePath, avatarOption: avatarOption);
 
       // Migrate stats from current temporary profile if exists
       if (_currentProfile != null && _currentProfile!.stats.totalStats.matchesPlayed > 0) {
@@ -510,12 +476,7 @@ class ProfileService {
   Future<void> _updateLeaderboard() async {
     if (_currentProfile != null && _authService.isAuthenticated && _currentProfile!.isRegistered) {
       try {
-        await _leaderboardService.updatePlayerEntry(
-          uid: _currentProfile!.id,
-          nickname: _currentProfile!.nickname,
-          totalWins: _currentProfile!.stats.playerVsAi.wins,
-          avatarOption: _currentProfile!.avatarOption,
-        );
+        await _leaderboardService.updatePlayerEntry(uid: _currentProfile!.id, nickname: _currentProfile!.nickname, totalWins: _currentProfile!.stats.playerVsAi.wins, avatarOption: _currentProfile!.avatarOption, lastWinTimestamp: _currentProfile!.stats.playerVsAi.lastWinTimestamp);
         debugPrint('🏆 ProfileService: updated leaderboard entry');
       } catch (e) {
         debugPrint('🏆 ProfileService: failed to update leaderboard: $e');

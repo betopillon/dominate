@@ -28,6 +28,7 @@ class GameModeStats {
   final double totalBlocksPerGame;
   final int quickestWinTurns; // Fewest turns to win
   final int longestGame; // Most turns in a game
+  final DateTime? lastWinTimestamp; // Timestamp of most recent win for ranking
 
   GameModeStats({
     this.matchesPlayed = 0,
@@ -49,6 +50,7 @@ class GameModeStats {
     this.totalBlocksPerGame = 0.0,
     this.quickestWinTurns = 0,
     this.longestGame = 0,
+    this.lastWinTimestamp,
   });
 
   /// Calculate win rate percentage
@@ -138,6 +140,9 @@ class GameModeStats {
 
     final newLongestGame = totalTurns > longestGame ? totalTurns : longestGame;
 
+    // Update lastWinTimestamp if this is a win
+    final newLastWinTimestamp = result == MatchResult.win ? DateTime.now() : lastWinTimestamp;
+
     return GameModeStats(
       matchesPlayed: newMatchesPlayed,
       wins: newWins,
@@ -158,6 +163,7 @@ class GameModeStats {
       totalBlocksPerGame: newBlocksDominated / newMatchesPlayed,
       quickestWinTurns: newQuickestWinTurns,
       longestGame: newLongestGame,
+      lastWinTimestamp: newLastWinTimestamp,
     );
   }
 
@@ -183,6 +189,7 @@ class GameModeStats {
       'totalBlocksPerGame': totalBlocksPerGame,
       'quickestWinTurns': quickestWinTurns,
       'longestGame': longestGame,
+      'lastWinTimestamp': lastWinTimestamp?.toIso8601String(),
     };
   }
 
@@ -208,6 +215,9 @@ class GameModeStats {
       totalBlocksPerGame: json['totalBlocksPerGame'] ?? 0.0,
       quickestWinTurns: json['quickestWinTurns'] ?? 0,
       longestGame: json['longestGame'] ?? 0,
+      lastWinTimestamp: json['lastWinTimestamp'] != null
+          ? DateTime.parse(json['lastWinTimestamp'])
+          : null,
     );
   }
 }

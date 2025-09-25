@@ -211,6 +211,58 @@ class GameBoard {
     return false;
   }
 
+  int getValidMoveCount(BlockState player) {
+    // Count the number of valid moves available for the player
+    int count = 0;
+    for (int i = 0; i < boardSize; i++) {
+      for (int j = 0; j < boardSize; j++) {
+        if (_grid[i][j] == BlockState.empty && _canPlaceBlock(i, j, player)) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  bool canMoveStealBlocks(BlockState player) {
+    // Check if ANY valid move can steal opponent blocks
+    for (int i = 0; i < boardSize; i++) {
+      for (int j = 0; j < boardSize; j++) {
+        if (_grid[i][j] == BlockState.empty && _canPlaceBlock(i, j, player)) {
+          // Check if this move would steal any blocks
+          if (_wouldMoveStealBlocks(i, j, player)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  bool _wouldMoveStealBlocks(int row, int col, BlockState player) {
+    // Check if placing a block at this position would steal any opponent blocks
+    final directions = [
+      [-1, 0], [1, 0], [0, -1], [0, 1], // cardinal directions
+      [-1, -1], [-1, 1], [1, -1], [1, 1], // diagonals
+    ];
+
+    for (final direction in directions) {
+      final newRow = row + direction[0];
+      final newCol = col + direction[1];
+
+      // Check if position is valid
+      if (newRow >= 0 && newRow < boardSize && newCol >= 0 && newCol < boardSize) {
+        final adjacentBlock = _grid[newRow][newCol];
+
+        // If adjacent block belongs to another player, this move would steal it
+        if (adjacentBlock != BlockState.empty && adjacentBlock != player) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   bool anyPlayerHasValidMoves(List<BlockState> players) {
     // Check if any player has valid moves
     for (final player in players) {

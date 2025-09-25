@@ -1,4 +1,5 @@
 import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -86,7 +87,7 @@ class AudioService {
       await stopBackgroundMusic();
 
       // Play the background music using flame_audio with volume
-      await FlameAudio.bgm.play('audio/bg_loop.wav', volume: _musicVolume);
+      await FlameAudio.bgm.play('bg_loop.wav', volume: _musicVolume);
       _isPlaying = true;
       debugPrint('🎵 Background music started with flame_audio');
     } catch (e) {

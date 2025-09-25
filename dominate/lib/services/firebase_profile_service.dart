@@ -21,15 +21,23 @@ class FirebaseProfileService {
   Future<void> saveProfile(PlayerProfile profile) async {
     try {
       final user = _authService.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        debugPrint('No authenticated user for profile saving');
+        return;
+      }
 
       // Convert profile to Firestore document
       final profileData = _profileToFirestoreData(profile, user.uid);
 
       await _profilesCollection.doc(user.uid).set(profileData, SetOptions(merge: true));
+      debugPrint('Profile saved successfully for user: ${user.uid}');
     } catch (e) {
-      // Handle error
       debugPrint('Error saving profile: $e');
+      // Check if it's a permission error
+      if (e.toString().contains('permission-denied') || e.toString().contains('PERMISSION_DENIED')) {
+        debugPrint('Permission denied when saving profile - check Firebase rules and authentication');
+      }
+      // Don't rethrow - let the app continue gracefully
     }
   }
 
@@ -37,7 +45,10 @@ class FirebaseProfileService {
   Future<PlayerProfile?> loadProfile() async {
     try {
       final user = _authService.currentUser;
-      if (user == null) return null;
+      if (user == null) {
+        debugPrint('No authenticated user for profile loading');
+        return null;
+      }
 
       final doc = await _profilesCollection.doc(user.uid).get();
 
@@ -49,6 +60,10 @@ class FirebaseProfileService {
       return null;
     } catch (e) {
       debugPrint('Error loading profile: $e');
+      // Check if it's a permission error
+      if (e.toString().contains('permission-denied') || e.toString().contains('PERMISSION_DENIED')) {
+        debugPrint('Permission denied when loading profile - user may need authentication');
+      }
       return null;
     }
   }
@@ -68,12 +83,13 @@ class FirebaseProfileService {
   }
 
   // Update profile
-  Future<PlayerProfile?> updateProfile({String? email, String? nickname, AvatarType? avatarType, String? imagePath, AvatarOption? avatarOption, bool? isEmailVerified, PlayerStats? stats}) async {
+  Future<PlayerProfile?> updateProfile({PlayerProfile? currentProfile, String? email, String? nickname, AvatarType? avatarType, String? imagePath, AvatarOption? avatarOption, bool? isEmailVerified, PlayerStats? stats}) async {
     try {
-      final currentProfile = await loadProfile();
-      if (currentProfile == null) return null;
+      // Use provided current profile or load from Firebase if not provided
+      final baseProfile = currentProfile ?? await loadProfile();
+      if (baseProfile == null) return null;
 
-      final updatedProfile = currentProfile.copyWith(email: email, nickname: nickname, avatarType: avatarType, imagePath: imagePath, avatarOption: avatarOption, isEmailVerified: isEmailVerified, stats: stats);
+      final updatedProfile = baseProfile.copyWith(email: email, nickname: nickname, avatarType: avatarType, imagePath: imagePath, avatarOption: avatarOption, isEmailVerified: isEmailVerified, stats: stats);
 
       await saveProfile(updatedProfile);
       return updatedProfile;
@@ -84,14 +100,14 @@ class FirebaseProfileService {
   }
 
   // Update player stats
-  Future<PlayerProfile?> updateStats({required GameMode gameMode, required MatchResult result, required int playerBlocks, required int opponentBlocks, required int matchDurationSeconds, required List<int> moveTimes, required int totalTurns, bool wasBehind = false}) async {
+  Future<PlayerProfile?> updateStats({PlayerProfile? currentProfile, required GameMode gameMode, required MatchResult result, required int playerBlocks, required int opponentBlocks, required int matchDurationSeconds, required List<int> moveTimes, required int totalTurns, bool wasBehind = false}) async {
     try {
-      final currentProfile = await loadProfile();
-      if (currentProfile == null) return null;
+      final baseProfile = currentProfile ?? await loadProfile();
+      if (baseProfile == null) return null;
 
-      final updatedStats = currentProfile.stats.updateWithMatch(mode: gameMode, result: result, playerBlocks: playerBlocks, opponentBlocks: opponentBlocks, matchDurationSeconds: matchDurationSeconds, moveTimes: moveTimes, totalTurns: totalTurns, wasBehind: wasBehind);
+      final updatedStats = baseProfile.stats.updateWithMatch(mode: gameMode, result: result, playerBlocks: playerBlocks, opponentBlocks: opponentBlocks, matchDurationSeconds: matchDurationSeconds, moveTimes: moveTimes, totalTurns: totalTurns, wasBehind: wasBehind);
 
-      return await updateProfile(stats: updatedStats);
+      return await updateProfile(currentProfile: baseProfile, stats: updatedStats);
     } catch (e) {
       debugPrint('Error updating stats: $e');
       return null;
@@ -302,6 +318,7 @@ class FirebaseProfileService {
       'totalBlocksPerGame': stats.totalBlocksPerGame,
       'quickestWinTurns': stats.quickestWinTurns,
       'longestGame': stats.longestGame,
+      'lastWinTimestamp': stats.lastWinTimestamp != null ? Timestamp.fromDate(stats.lastWinTimestamp!) : null,
       'winRate': stats.winRate,
       'averageMatchDuration': stats.averageMatchDuration,
       'averageBlocksPerGame': stats.averageBlocksPerGame,
@@ -334,6 +351,7 @@ class FirebaseProfileService {
       totalBlocksPerGame: (data['totalBlocksPerGame'] ?? 0.0).toDouble(),
       quickestWinTurns: data['quickestWinTurns'] ?? 0,
       longestGame: data['longestGame'] ?? 0,
+      lastWinTimestamp: (data['lastWinTimestamp'] as Timestamp?)?.toDate(),
     );
   }
 }

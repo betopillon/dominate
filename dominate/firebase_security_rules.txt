@@ -1,0 +1,41 @@
+// Updated Firebase Security Rules for Dominate App
+// Apply these rules in your Firebase Console -> Firestore Database -> Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Profiles collection - authenticated users can access their own profile
+    // Anonymous users can also create temporary profiles
+    match /profiles/{userId} {
+      allow read, write: if request.auth != null &&
+        (request.auth.uid == userId || request.auth.token.firebase.sign_in_provider == 'anonymous');
+
+      // Allow anonymous users to create profiles
+      allow create: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    // Leaderboard collection - authenticated users can read all entries
+    // Only registered (non-anonymous) users can write to leaderboard
+    match /leaderboard/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Temporary profiles collection - for anonymous users
+    match /temp_profiles/{sessionId} {
+      allow read, write: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+  }
+}
+
+// IMPORTANT: After applying these rules, you need to:
+// 1. Enable Anonymous Authentication in Firebase Console -> Authentication -> Sign-in method
+// 2. Make sure the rules are saved and deployed
+// 3. Test the app to ensure it connects properly
+
+// These rules allow:
+// - Anonymous users to create temporary profiles and play the game
+// - Registered users to access their permanent profiles and leaderboards
+// - Graceful degradation when users are not authenticated
