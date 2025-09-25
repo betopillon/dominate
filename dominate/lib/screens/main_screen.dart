@@ -129,7 +129,6 @@ class _MainScreenState extends State<MainScreen> {
                 Expanded(
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)), Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7), letterSpacing: 0.5), overflow: TextOverflow.ellipsis)]),
                 ),
-                const Spacer(),
                 Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.5), size: 16),
               ],
             ),
