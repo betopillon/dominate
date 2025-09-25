@@ -30,7 +30,10 @@
       "Bash(copy:*)",
       "Bash(git pull:*)",
       "Read(//d/Projects/claude_code/Dominate/**)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git commit:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
