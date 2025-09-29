@@ -53,6 +53,9 @@ dependencies:
   cloud_firestore: ^5.4.4
   firebase_analytics: ^11.3.3
 
+  # App Tracking Transparency for iOS
+  app_tracking_transparency: ^2.0.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

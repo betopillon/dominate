@@ -10,6 +10,7 @@ import 'screens/how_to_play_screen.dart';
 import 'widgets/space_background.dart';
 import 'services/profile_service.dart';
 import 'services/audio_service.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   // Wrap everything in try-catch to prevent app crashes during initialization
@@ -37,6 +38,16 @@ void main() async {
     } catch (e) {
       print('👤 ProfileService initialization failed: $e');
       // Profile service has its own error handling, continue anyway
+    }
+
+    // Initialize analytics service
+    try {
+      print('📊 Initializing AnalyticsService...');
+      await AnalyticsService.instance.initialize();
+      print('📊 AnalyticsService initialized successfully');
+    } catch (e) {
+      print('📊 AnalyticsService initialization failed: $e');
+      // Analytics service failure shouldn't prevent app from running
     }
 
     // Initialize audio service
@@ -81,6 +92,11 @@ class _DominateAppState extends State<DominateApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // Initialize analytics and request tracking permission
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _initializeAnalytics();
+    });
+
     // Start background music after a short delay to ensure everything is initialized
     Future.delayed(const Duration(milliseconds: 500), () {
       try {
@@ -90,6 +106,18 @@ class _DominateAppState extends State<DominateApp> with WidgetsBindingObserver {
         // Music failure shouldn't affect app functionality
       }
     });
+  }
+
+  Future<void> _initializeAnalytics() async {
+    try {
+      // Log app open
+      await AnalyticsService.instance.logAppOpen();
+
+      // Request tracking permission (iOS only)
+      await AnalyticsService.instance.requestTrackingPermission();
+    } catch (e) {
+      print('📊 Failed to initialize analytics: $e');
+    }
   }
 
   @override
@@ -164,12 +192,58 @@ class _GameScreenState extends State<GameScreen> {
       setState(() {
         _isGameOver = true;
       });
+      _logGameEnd();
     };
 
     // Start the game after widget is built
     Future.delayed(const Duration(milliseconds: 100), () {
       game!.startGame(mode);
+      _logGameStart(mode);
     });
+  }
+
+  void _logGameStart(GameMode mode) {
+    try {
+      final playerCount = game?.gamePlayers.players.length ?? 2;
+      AnalyticsService.instance.logGameStart(
+        gameMode: mode.toString().split('.').last,
+        playerCount: playerCount,
+      );
+    } catch (e) {
+      print('📊 Failed to log game start: $e');
+    }
+  }
+
+  void _logGameEnd() {
+    try {
+      if (game == null) return;
+
+      final players = game!.gamePlayers.players;
+      final winners = game!.gamePlayers.getWinners();
+      final currentPlayer = players.first; // Use first player as reference
+
+      String result;
+      if (winners.isEmpty) {
+        result = 'draw';
+      } else if (winners.contains(currentPlayer)) {
+        result = 'win';
+      } else {
+        result = 'lose';
+      }
+
+      // Calculate game duration (approximate)
+      final duration = 300; // Placeholder - you might want to track actual duration
+
+      AnalyticsService.instance.logGameEnd(
+        gameMode: widget.gameMode.toString().split('.').last,
+        playerCount: players.length,
+        result: result,
+        duration: duration,
+        finalScore: currentPlayer.score,
+      );
+    } catch (e) {
+      print('📊 Failed to log game end: $e');
+    }
   }
 
   void _backToMenu() {

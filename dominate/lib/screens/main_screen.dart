@@ -6,6 +6,7 @@ import 'stats_screen.dart';
 import '../widgets/space_transition.dart';
 import '../widgets/space_background.dart';
 import 'leaderboard_screen.dart';
+import '../services/analytics_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -15,6 +16,13 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    // Log screen view
+    AnalyticsService.instance.logScreenView('main_screen');
+  }
 
   @override
   Widget build(BuildContext context) {
