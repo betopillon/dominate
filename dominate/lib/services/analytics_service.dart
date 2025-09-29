@@ -61,6 +61,12 @@ class AnalyticsService {
           await _analytics!.setAnalyticsCollectionEnabled(false);
           debugPrint('📊 Tracking permission not determined yet');
           break;
+        case TrackingStatus.notSupported:
+          // ATT not supported on this device (e.g., iOS < 14.5 or non-iOS)
+          _trackingAllowed = true;
+          await _analytics!.setAnalyticsCollectionEnabled(true);
+          debugPrint('📊 ATT not supported - allowing tracking');
+          break;
       }
     } catch (e) {
       debugPrint('📊 Error checking tracking permission: $e');
@@ -98,6 +104,12 @@ class AnalyticsService {
           await _analytics!.setAnalyticsCollectionEnabled(false);
           debugPrint('📊 Tracking permission still not determined');
           return false;
+        case TrackingStatus.notSupported:
+          // ATT not supported, allow tracking by default
+          _trackingAllowed = true;
+          await _analytics!.setAnalyticsCollectionEnabled(true);
+          debugPrint('📊 ATT not supported - allowing tracking');
+          return true;
       }
     } catch (e) {
       debugPrint('📊 Error requesting tracking permission: $e');
